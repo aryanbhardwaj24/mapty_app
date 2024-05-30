@@ -36,6 +36,7 @@ class Workout {
 
 class Running extends Workout {
   #type = `running`;
+  #pace;
 
   constructor(coordinates, distance, duration, cadence) {
     super(coordinates, distance, duration);
@@ -44,16 +45,21 @@ class Running extends Workout {
   }
 
   calcPace() {
-    this.pace = this.duration / this.distance; //in min/km
+    this.#pace = this.duration / this.distance; //in min/km
   }
 
   get type() {
     return this.#type;
   }
+
+  get pace() {
+    return this.#pace;
+  }
 }
 
 class Cycling extends Workout {
   #type = `cycling`;
+  #speed;
 
   constructor(coordinates, distance, duration, elevationGain) {
     super(coordinates, distance, duration);
@@ -62,11 +68,15 @@ class Cycling extends Workout {
   }
 
   calcSpeed() {
-    this.speed = (this.distance * 60) / this.duration; //in km/h
+    this.#speed = (this.distance * 60) / this.duration; //in km/h
   }
 
   get type() {
     return this.#type;
+  }
+
+  get speed() {
+    return this.#speed;
   }
 }
 
@@ -109,6 +119,18 @@ class App {
     inputDistance.focus();
 
     this.#mapEvent = mpEvent;
+  }
+
+  #hideForm() {
+    inputDistance.value =
+      inputDuration.value =
+      inputCadence.value =
+      inputElevation.value =
+        ``;
+
+    form.style.display = `none`;
+    form.classList.add(`hidden`);
+    setTimeout(() => (form.style.display = `grid`), 1000);
   }
 
   #toggleElevationField() {
@@ -159,13 +181,7 @@ class App {
     }
 
     this.#workouts.push(workout);
-
-    inputDistance.value =
-      inputDuration.value =
-      inputCadence.value =
-      inputElevation.value =
-        ``;
-
+    this.#renderWorkout(workout);
     this.#renderWorkoutMarker(workout);
   }
 
@@ -181,8 +197,67 @@ class App {
           className: `${workout.type}-popup`,
         })
       )
-      .setPopupContent(`${workout.type}`)
+      .setPopupContent(
+        `${workout.type === `running` ? `🏃🏻‍♂️` : `🚴🏻`} ${
+          workout.type.slice(0, 1).toUpperCase() + workout.type.slice(1)
+        } on ${months[workout.date.getMonth()]} ${workout.date.getDate()}`
+      )
       .openPopup();
+  }
+
+  #renderWorkout(workout) {
+    this.#hideForm();
+
+    let html = `
+      <li class="workout workout--${workout.type}" data-id=${workout.id}>
+        <h2 class="workout__title">${
+          workout.type.slice(0, 1).toUpperCase() + workout.type.slice(1)
+        } on ${months[workout.date.getMonth()]} ${workout.date.getDate()}</h2>
+        <div class="workout__details">
+          <span class="workout__icon">${
+            workout.type === `running` ? `🏃🏻‍♂️` : `🚴🏻`
+          }</span>
+          <span class="workout__value">${workout.distance}</span>
+          <span class="workout__unit">km</span>
+        </div>
+        <div class="workout__details">
+          <span class="workout__icon">⏱</span>
+          <span class="workout__value">${workout.duration}</span>
+          <span class="workout__unit">min</span>
+        </div>
+    `;
+
+    if (workout.type === `running`) {
+      html += `
+        <div class="workout__details">
+          <span class="workout__icon">⚡️</span>
+          <span class="workout__value">${workout.pace.toFixed(2)}</span>
+          <span class="workout__unit">min/km</span>
+        </div>
+        <div class="workout__details">
+          <span class="workout__icon">🦶🏼</span>
+          <span class="workout__value">${workout.cadence}</span>
+          <span class="workout__unit">spm</span>
+        </div>
+      `;
+    }
+
+    if (workout.type === `cycling`) {
+      html += `
+        <div class="workout__details">
+          <span class="workout__icon">⚡️</span>
+          <span class="workout__value">${workout.speed.toFixed(2)}</span>
+          <span class="workout__unit">km/h</span>
+        </div>
+        <div class="workout__details">
+          <span class="workout__icon">⛰</span>
+          <span class="workout__value">${workout.elevationGain}</span>
+          <span class="workout__unit">m</span>
+        </div>
+      `;
+    }
+
+    form.insertAdjacentHTML(`afterend`, html);
   }
 }
 
