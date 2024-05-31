@@ -84,11 +84,13 @@ class App {
   #map;
   #mapEvent;
   #workouts = [];
+  #mapZoomLevel = 14;
 
   constructor() {
     this.#getPosition();
     form.addEventListener(`submit`, this.#newWorkout.bind(this));
     inputType.addEventListener(`change`, this.#toggleElevationField);
+    containerWorkouts.addEventListener(`click`, this.#moveToPopup.bind(this));
   }
 
   #getPosition() {
@@ -104,7 +106,7 @@ class App {
     const { latitude, longitude } = position.coords;
     const coordinates = [latitude, longitude];
 
-    this.#map = L.map("map").setView(coordinates, 14);
+    this.#map = L.map("map").setView(coordinates, this.#mapZoomLevel);
 
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution:
@@ -258,6 +260,21 @@ class App {
     }
 
     form.insertAdjacentHTML(`afterend`, html);
+  }
+
+  #moveToPopup(event) {
+    const workoutElement = event.target.closest(`.workout`);
+
+    if (!workoutElement) return;
+
+    const workout = this.#workouts.find(
+      (work) => work.id === Number(workoutElement.dataset.id)
+    );
+
+    this.#map.setView(workout.coordinates, this.#mapZoomLevel, {
+      animate: true,
+      duration: 1,
+    });
   }
 }
 
