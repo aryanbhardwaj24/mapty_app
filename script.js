@@ -1,20 +1,5 @@
 "use strict";
 
-const months = [
-  `January`,
-  `February`,
-  `March`,
-  `April`,
-  `May`,
-  `June`,
-  `July`,
-  `August`,
-  `September`,
-  `October`,
-  `November`,
-  `December`,
-];
-
 const form = document.querySelector(`.form`);
 const containerWorkouts = document.querySelector(`.workouts`);
 const inputType = document.querySelector(`.form__input--type`);
@@ -32,51 +17,56 @@ class Workout {
     this.distance = distance; //in km
     this.duration = duration; //in min
   }
+
+  setDescription() {
+    const months = [
+      `January`,
+      `February`,
+      `March`,
+      `April`,
+      `May`,
+      `June`,
+      `July`,
+      `August`,
+      `September`,
+      `October`,
+      `November`,
+      `December`,
+    ];
+
+    this.description = `${
+      this.type.slice(0, 1).toUpperCase() + this.type.slice(1)
+    } on ${months[this.date.getMonth()]} ${this.date.getDate()}`;
+  }
 }
 
 class Running extends Workout {
-  #type = `running`;
-  #pace;
+  type = `running`;
 
   constructor(coordinates, distance, duration, cadence) {
     super(coordinates, distance, duration);
     this.cadence = cadence;
     this.calcPace();
+    this.setDescription();
   }
 
   calcPace() {
-    this.#pace = this.duration / this.distance; //in min/km
-  }
-
-  get type() {
-    return this.#type;
-  }
-
-  get pace() {
-    return this.#pace;
+    this.pace = this.duration / this.distance; //in min/km
   }
 }
 
 class Cycling extends Workout {
-  #type = `cycling`;
-  #speed;
+  type = `cycling`;
 
   constructor(coordinates, distance, duration, elevationGain) {
     super(coordinates, distance, duration);
     this.elevationGain = elevationGain;
     this.calcSpeed();
+    this.setDescription();
   }
 
   calcSpeed() {
-    this.#speed = (this.distance * 60) / this.duration; //in km/h
-  }
-
-  get type() {
-    return this.#type;
-  }
-
-  get speed() {
-    return this.#speed;
+    this.speed = (this.distance * 60) / this.duration; //in km/h
   }
 }
 
@@ -88,6 +78,7 @@ class App {
 
   constructor() {
     this.#getPosition();
+    this.#getLocalStorage();
     form.addEventListener(`submit`, this.#newWorkout.bind(this));
     inputType.addEventListener(`change`, this.#toggleElevationField);
     containerWorkouts.addEventListener(`click`, this.#moveToPopup.bind(this));
@@ -114,6 +105,7 @@ class App {
     }).addTo(this.#map);
 
     this.#map.on(`click`, this.#showForm.bind(this));
+    this.#workouts.forEach((workout) => this.#renderWorkoutMarker(workout));
   }
 
   #showForm(mpEvent) {
@@ -185,6 +177,7 @@ class App {
     this.#workouts.push(workout);
     this.#renderWorkout(workout);
     this.#renderWorkoutMarker(workout);
+    this.#setLocalStorage();
   }
 
   #renderWorkoutMarker(workout) {
@@ -200,9 +193,7 @@ class App {
         })
       )
       .setPopupContent(
-        `${workout.type === `running` ? `🏃🏻‍♂️` : `🚴🏻`} ${
-          workout.type.slice(0, 1).toUpperCase() + workout.type.slice(1)
-        } on ${months[workout.date.getMonth()]} ${workout.date.getDate()}`
+        `${workout.type === `running` ? `🏃🏻‍♂️` : `🚴🏻`} ${workout.description}`
       )
       .openPopup();
   }
@@ -212,9 +203,7 @@ class App {
 
     let html = `
       <li class="workout workout--${workout.type}" data-id=${workout.id}>
-        <h2 class="workout__title">${
-          workout.type.slice(0, 1).toUpperCase() + workout.type.slice(1)
-        } on ${months[workout.date.getMonth()]} ${workout.date.getDate()}</h2>
+        <h2 class="workout__title">${workout.description}</h2>
         <div class="workout__details">
           <span class="workout__icon">${
             workout.type === `running` ? `🏃🏻‍♂️` : `🚴🏻`
@@ -275,6 +264,29 @@ class App {
       animate: true,
       duration: 1,
     });
+  }
+
+  #setLocalStorage() {
+    localStorage.setItem(`workouts`, JSON.stringify(this.#workouts));
+  }
+
+  #getLocalStorage() {
+    const data = JSON.parse(localStorage.getItem(`workouts`));
+
+    if (!data) return;
+
+    this.#workouts = data;
+    this.#workouts.forEach((workout) => {
+      workout.__proto__ = Object.create(
+        workout.type === `running` ? Running.prototype : Cycling.prototype
+      );
+      this.#renderWorkout(workout);
+    });
+  }
+
+  reset() {
+    localStorage.removeItem(`workouts`);
+    location.reload();
   }
 }
 
